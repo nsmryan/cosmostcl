@@ -82,7 +82,7 @@ proc handle_item {line} {
 }
 
 proc handle_id_item {line} {
-    global current_item current_tlm
+    global current_item
 
     set required [list name bitoffset bitsize datatype idvalue]
     set optional [list description endianness]
@@ -117,8 +117,36 @@ proc handle_append_id_item {line} {
     set item [decode $required $optional $line]
 
     set bitoffset [dict get $current_tlm nextoffset]
-    dict set fields bitoffset $bitoffset
-    dict set current_tlm nextoffset [expr $bitoffset [dict get $fields bitsize]]
+    dict set item bitoffset $bitoffset
+    dict set current_tlm nextoffset [expr $bitoffset [dict get $item bitsize]]
+
+    push_item
+
+    set current_item $item
+}
+
+proc handle_array {line} {
+    global current_item
+
+    set required [list name bitoffset bitsize datatype arraybitsize]
+    set optional [list description endianness]
+    set item [decode $required $optional $line]
+
+    push_item
+
+    set current_item $item
+}
+
+proc handle_append_array {line} {
+    global current_item current_tlm
+
+    set required [list name bitsize datatype arraybitsize]
+    set optional [list description endianness]
+    set item [decode $required $optional $line]
+
+    set bitoffset [dict get $current_tlm nextoffset]
+    dict set item bitoffset $bitoffset
+    dict set current_tlm nextoffset [expr $bitoffset [dict get $item bitsize]]
 
     push_item
 
@@ -246,8 +274,6 @@ proc handle_line {line} {
         } else {
             # TODO missing limit group
             #      limit group item
-            #      array item
-            #      append array item
             #      delete item
             #      allow_short
             #      hidden packet
@@ -262,6 +288,8 @@ proc handle_line {line} {
                 ID_ITEM { handle_id_item $line }
                 APPEND_ITEM { handle_append_item $line }
                 APPEND_ID_ITEM { handle_append_id_item $line }
+                APPEND_ARRAY_ITEM { handle_append_array $line }
+                ARRAY_ITEM { handle_array $line }
                 STATE { handle_state $line }
                 ITEM { handle_state $line }
                 GENERIC_READ_CONVERSION_START { handle_conv_start $line }
